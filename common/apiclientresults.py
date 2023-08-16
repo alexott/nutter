@@ -2,10 +2,10 @@
 Copyright (c) Microsoft Corporation.
 Licensed under the MIT license.
 """
-from typing import Iterator
+from typing import Iterator, Optional, Union
 
 from databricks.sdk import WorkspaceClient
-from databricks.sdk.service.jobs import Run, RunLifeCycleState
+from databricks.sdk.service.jobs import Run, RunResultState
 
 from . import utils
 from abc import ABCMeta
@@ -15,46 +15,12 @@ import logging
 from databricks.sdk.service.workspace import ObjectType, ObjectInfo
 
 
-class ExecuteNotebookResult(object):
-    def __init__(self, life_cycle_state, notebook_path,
-                 notebook_result, notebook_run_page_url):
-        self.task_result_state = life_cycle_state
-        self.notebook_path = notebook_path
-        self.notebook_result = notebook_result
-        self.notebook_run_page_url = notebook_run_page_url
-
-    @classmethod
-    def from_job_output(cls, run: Run, dbclient: WorkspaceClient):
-        notebook_result = NotebookOutputResult.from_job_output(run, dbclient)
-
-        return cls(run.state.life_cycle_state, run.tasks[0].notebook_task.notebook_path,
-                   notebook_result, run.run_page_url)
-
-    @property
-    def is_error(self):
-        # The assumption is that the task is an terminal state
-        # Success state must be TERMINATED all the others are considered failures
-        return not (self.task_result_state == RunLifeCycleState.TERMINATED)
-
-    @property
-    def is_any_error(self):
-        if self.is_error:
-            return True
-        if self.notebook_result.is_error:
-            return True
-        if self.notebook_result.nutter_test_results is None:
-            return True
-
-        for test_case in self.notebook_result.nutter_test_results.results:
-            if not test_case.passed:
-                return True
-
-        return False
-
-
 class NotebookOutputResult(object):
-    def __init__(self, result_state, exit_output, nutter_test_results):
-        self.result_state = result_state
+    def __init__(self, result_state: Union[RunResultState, str], exit_output, nutter_test_results):
+        if isinstance(result_state, str):
+            self.result_state = result_state
+        else:
+            self.result_state = result_state.name
         self.exit_output = exit_output
         self.nutter_test_results = nutter_test_results
 
@@ -80,7 +46,9 @@ class NotebookOutputResult(object):
     @property
     def is_error(self):
         # https://docs.azuredatabricks.net/dev-tools/api/latest/jobs.html#jobsrunresultstate
-        return self.result_state != 'SUCCESS' and not self.is_run_from_notebook
+        return self.result_state != 'SUCCESS' and \
+            self.result_state != 'SUCCESS_WITH_FAILURES' and \
+            not self.is_run_from_notebook
 
     @property
     def is_run_from_notebook(self):
@@ -101,10 +69,55 @@ class NotebookOutputResult(object):
         try:
             return TestResults().deserialize(exit_output)
         except Exception as ex:
-            error = 'error while creating result from {}. Error: {}'.format(
-                ex, exit_output)
+            error = f'error while creating result from {ex}. Error: {exit_output}'
             logging.debug(error)
             return None
+
+
+class ExecuteNotebookResult(object):
+    def __init__(self, task_result_state: Union[RunResultState, str], notebook_path: str,
+                 notebook_result: NotebookOutputResult, notebook_run_page_url):
+        if isinstance(task_result_state, str):
+            self.task_result_state = task_result_state
+        else:
+            self.task_result_state = task_result_state.name
+        self.notebook_path = notebook_path
+        self.notebook_result = notebook_result
+        self.notebook_run_page_url = notebook_run_page_url
+
+    @classmethod
+    def from_job_output(cls, run: Run, dbclient: WorkspaceClient):
+        notebook_result = NotebookOutputResult.from_job_output(run, dbclient)
+
+        return cls(run.state.result_state, run.tasks[0].notebook_task.notebook_path,
+                   notebook_result, run.run_page_url)
+
+    @property
+    def is_error(self) -> bool:
+        err = self.task_result_state != 'SUCCESS' and \
+              self.task_result_state != 'SUCCESS_WITH_FAILURES'
+        # The assumption is that the task is a terminal state
+        # Success state must be SUCCESS all the others are considered failures
+        return err
+
+    @property
+    def is_any_error(self):
+        if self.is_error:
+            logging.debug(f"is_error: {self}")
+            return True
+        if self.notebook_result.is_error:
+            logging.debug(f"self.notebook_result.is_error: {self}")
+            return True
+        if self.notebook_result.nutter_test_results is None:
+            logging.debug(f"self.notebook_result.nutter_test_results: {self}")
+            return True
+
+        for test_case in self.notebook_result.nutter_test_results.results:
+            if not test_case.passed:
+                logging.debug(f"!test_case.passed: {test_case}, {self}")
+                return True
+
+        return False
 
 
 class WorkspacePath(object):

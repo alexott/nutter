@@ -25,12 +25,12 @@ BUILD_NUMBER_ENV_VAR = 'NUTTER_BUILD_NUMBER'
 def get_cli_version():
     build_number = os.environ.get(BUILD_NUMBER_ENV_VAR)
     if build_number:
-        return '{}.{}'.format(__version__, build_number)
+        return f'{__version__}.{build_number}'
     return __version__
 
 
 def get_cli_header():
-    header = 'Nutter Version {}\n'.format(get_cli_version())
+    header = f'Nutter Version {get_cli_version()}\n'
     header += '+' * 50
     header += '\n'
 
@@ -62,7 +62,7 @@ class NutterCLI(object):
                                   junit_report, max_parallel_tests,
                                   tags_report, recursive, notebook_params))
 
-            logging.debug("Executing test(s): {}".format(test_pattern))
+            logging.debug(f"Executing test(s): {test_pattern}")
 
             if self._is_a_test_pattern(test_pattern):
                 logging.debug('Executing pattern')
@@ -84,7 +84,7 @@ class NutterCLI(object):
 
     def list(self, path, recursive=False):
         try:
-            logging.debug("Running tests. path: {}".format(path))
+            logging.debug(f"Running tests. path: {path}")
             results = self._nutter.list_tests(path, recursive)
             self._nutter.events_processor_wait()
             self._display_list_results(results)
@@ -114,7 +114,7 @@ class NutterCLI(object):
             logging.debug('No providers were registered.')
             return
         for provider in report_manager.providers_names():
-            print('Writing {} report.'.format(provider))
+            print(f'Writing {provider} report.')
 
         for exec_result in exec_results:
             t_result = api.to_test_results(

@@ -5,6 +5,7 @@ Licensed under the MIT license.
 
 import base64
 import gzip
+import zlib
 import jsonpickle
 
 from py4j.protocol import Py4JJavaError
@@ -17,6 +18,9 @@ def get_test_results():
 
 
 class TestResults(SerializableData):
+    def __str__(self) -> str:
+        return jsonpickle.encode(self)
+
     def __init__(self):
         self.results = []
         self.test_cases = 0
@@ -37,7 +41,7 @@ class TestResults(SerializableData):
 
     @staticmethod
     def serialize_object(obj):
-        bin_data = gzip.compress(bytes(jsonpickle.encode(obj), 'utf-8'))
+        bin_data = zlib.compress(bytes(jsonpickle.encode(obj), 'utf-8'))
         return str(base64.encodebytes(bin_data), "utf-8")
 
     def serialize(self):
@@ -49,7 +53,7 @@ class TestResults(SerializableData):
     def deserialize(self, pickle_string):
         bin_str = pickle_string.encode("utf-8")
         decoded_bin_data = base64.decodebytes(bin_str)
-        return jsonpickle.decode(gzip.decompress(decoded_bin_data))
+        return jsonpickle.decode(zlib.decompress(decoded_bin_data))
 
     def passed(self):
         for item in self.results:
@@ -86,7 +90,6 @@ class TestResult:
         self.test_name = test_name
         self.execution_time = execution_time
         self.tags = tags
-
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):

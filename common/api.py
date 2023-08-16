@@ -42,7 +42,7 @@ def to_test_results(exit_output):
     try:
         return TestResults().deserialize(exit_output)
     except Exception as ex:
-        logging.debug('error while creating result from {}. Error: {}', ex, exit_output)
+        logging.debug(f'error while creating result from {ex}. Error: {exit_output}')
         return None
 
 
@@ -147,7 +147,7 @@ class Nutter(NutterApi):
     def _add_status_event(self, name, status):
         if self._events_processor is None:
             return
-        logging.debug('Status event. name:{} status:{}'.format(name, status))
+        logging.debug(f'Status event. name:{name} status:{status}')
 
         self._events_processor.add_event(name, status)
 
@@ -182,7 +182,7 @@ class Nutter(NutterApi):
                                                 timeout, notebook_params)
         self._add_status_event(NutterStatusEvents.TestExecuted,
                                ExecutionResultEventData.from_execution_results(result))
-        logging.debug('Executed: {}', test_notebook_path)
+        logging.debug(f'Executed: {test_notebook_path}')
         return result
 
     def _run_and_await(self, func_scheduler):
@@ -204,7 +204,7 @@ class Nutter(NutterApi):
             func_result.exception is not None))
 
         if func_result.exception is not None:
-            logging.debug('Exception:{}'.format(func_result.exception))
+            logging.debug(f'Exception:{func_result.exception}')
             raise func_result.exception
 
 
@@ -258,7 +258,7 @@ class TestNamePatternMatcher(object):
                 return
             re.compile(pattern)
         except re.error as ex:
-            logging.debug('Pattern could not be compiled. {}'.format(ex))
+            logging.debug(f'Pattern could not be compiled. {ex}')
             raise ValueError(
                 """ The pattern provided is invalid.
                      The pattern must start with an alphanumeric character """)
@@ -291,7 +291,7 @@ class ExecutionResultEventData():
         try:
             success = not exec_results.is_any_error
         except Exception as ex:
-            logging.debug("Error while creating the ExecutionResultEventData {}", ex)
+            logging.debug(f"Error while creating the ExecutionResultEventData {ex}")
         finally:
             return cls(notebook_path, success, notebook_run_page_url)
 
