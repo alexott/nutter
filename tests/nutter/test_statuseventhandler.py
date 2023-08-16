@@ -7,6 +7,7 @@ import pytest
 import enum
 from common.statuseventhandler import StatusEventsHandler, EventHandler, StatusEvent
 
+
 def test__add_event_and_wait__1_event__handler_receives_it():
     test_handler = TestEventHandler()
     status_handler = StatusEventsHandler(test_handler)
@@ -17,6 +18,7 @@ def test__add_event_and_wait__1_event__handler_receives_it():
 
     assert item.event == TestStatusEvent.AnEvent
     assert item.data == 'added'
+
 
 def test__add_event_and_wait__2_event2__handler_receives_them():
     test_handler = TestEventHandler()
@@ -34,6 +36,7 @@ def test__add_event_and_wait__2_event2__handler_receives_them():
     assert item2.event == TestStatusEvent.AnEvent
     assert item2.data == 'added'
 
+
 class TestEventHandler(EventHandler):
     def __init__(self):
         self._queue = None
@@ -46,6 +49,7 @@ class TestEventHandler(EventHandler):
         item = self._queue.get()
         self._queue.task_done()
         return item
+
 
 class TestStatusEvent(enum.Enum):
     AnEvent = 1

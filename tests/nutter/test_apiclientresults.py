@@ -10,57 +10,58 @@ import common.api as nutter_api
 from common.testresult import TestResults, TestResult
 from common.apiclientresults import ExecuteNotebookResult, NotebookOutputResult
 
+
 def test__is_any_error__not_terminated__true():
-    exec_result = _get_run_test_response('', 'SKIPPED','')
+    exec_result = _get_run_test_response('', 'SKIPPED', '')
 
     assert exec_result.is_any_error
 
 
 def test__is_any_error__terminated_not_success__true():
-    exec_result = _get_run_test_response('FAILED', 'TERMINATED','')
+    exec_result = _get_run_test_response('FAILED', 'TERMINATED', '')
 
     assert exec_result.is_any_error
 
 
 def test__is_any_error__terminated_success_invalid_results__true():
-    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED','')
+    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED', '')
 
     assert exec_result.is_any_error
 
 
 def test__is_any_error__terminated_success_valid_results_with_failure__true():
     test_results = TestResults()
-    test_results.append(TestResult('case',False, 10,[]))
-    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED',test_results.serialize())
+    test_results.append(TestResult('case', False, 10, []))
+    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED', test_results.serialize())
 
     assert exec_result.is_any_error
-
 
 
 def test__is_any_error__terminated_success_valid_results_with_no_failure__false():
     test_results = TestResults()
-    test_results.append(TestResult('case',True, 10,[]))
-    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED',test_results.serialize())
+    test_results.append(TestResult('case', True, 10, []))
+    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED', test_results.serialize())
 
     assert not exec_result.is_any_error
-
 
 
 def test__is_any_error__terminated_success_2_valid_results_with_no_failure__false():
     test_results = TestResults()
-    test_results.append(TestResult('case',True, 10,[]))
-    test_results.append(TestResult('case2',True, 10,[]))
-    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED',test_results.serialize())
+    test_results.append(TestResult('case', True, 10, []))
+    test_results.append(TestResult('case2', True, 10, []))
+    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED', test_results.serialize())
 
     assert not exec_result.is_any_error
 
+
 def test__is_any_error__terminated_success_2_results_1_invalid__true():
     test_results = TestResults()
-    test_results.append(TestResult('case',True, 10,[]))
-    test_results.append(TestResult('case2',False, 10,[]))
-    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED',test_results.serialize())
+    test_results.append(TestResult('case', True, 10, []))
+    test_results.append(TestResult('case2', False, 10, []))
+    exec_result = _get_run_test_response('SUCCESS', 'TERMINATED', test_results.serialize())
 
     assert exec_result.is_any_error
+
 
 def test__is_run_from_notebook__result_state_NA__returns_true():
     # Arrange
@@ -69,8 +70,9 @@ def test__is_run_from_notebook__result_state_NA__returns_true():
     # Act
     is_run_from_notebook = nbr.is_run_from_notebook
 
-    #Assert
+    # Assert
     assert True == is_run_from_notebook
+
 
 def test__is_error__is_run_from_notebook_true__returns_false():
     # Arrange
@@ -79,8 +81,9 @@ def test__is_error__is_run_from_notebook_true__returns_false():
     # Act
     is_error = nbr.is_error
 
-    #Assert
+    # Assert
     assert False == is_error
+
 
 def _get_run_test_response(result_state, life_cycle_state, notebook_result):
     data_json = """
@@ -109,4 +112,3 @@ def _get_run_test_response(result_state, life_cycle_state, notebook_result):
     data_dict['metadata']['state']['life_cycle_state'] = life_cycle_state
 
     return ExecuteNotebookResult.from_job_output(data_dict)
-

@@ -6,6 +6,7 @@ with open("README.md", "r") as fh:
 
 version = nuttercli.get_cli_version()
 
+
 def parse_requirements(filename):
     """Load requirements from a pip requirements file."""
     lineiter = (line.strip() for line in open(filename))
@@ -32,5 +33,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.7.0',
+    python_requires='>=3.8.0',
 )

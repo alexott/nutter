@@ -9,7 +9,7 @@ import os
 import datetime
 
 import common.api as api
-from common.apiclient import DEFAULT_POLL_WAIT_TIME, InvalidConfigurationException
+from common.apiclient import InvalidConfigurationException
 
 import common.resultsview as view
 from .eventhandlers import ConsoleEventHandler
@@ -53,7 +53,7 @@ class NutterCLI(object):
     def run(self, test_pattern, cluster_id,
             timeout=120, junit_report=False,
             tags_report=False, max_parallel_tests=1,
-            recursive=False, poll_wait_time=DEFAULT_POLL_WAIT_TIME, notebook_params=None):
+            recursive=False, notebook_params=None):
         try:
             logging.debug(""" Running tests. test_pattern: {} cluster_id: {}  notebook_params: {} timeout: {}
                                junit_report: {} max_parallel_tests: {}
@@ -68,14 +68,13 @@ class NutterCLI(object):
                 logging.debug('Executing pattern')
                 results = self._nutter.run_tests(
                     test_pattern, cluster_id, timeout,
-                    max_parallel_tests, recursive, poll_wait_time, notebook_params)
+                    max_parallel_tests, recursive, notebook_params)
                 self._nutter.events_processor_wait()
                 self._handle_results(results, junit_report, tags_report)
                 return
 
             logging.debug('Executing single test')
-            result = self._nutter.run_test(test_pattern, cluster_id,
-                                           timeout, poll_wait_time)
+            result = self._nutter.run_test(test_pattern, cluster_id, timeout)
 
             self._handle_results([result], junit_report, tags_report)
 
@@ -118,7 +117,7 @@ class NutterCLI(object):
             print('Writing {} report.'.format(provider))
 
         for exec_result in exec_results:
-            t_result = api.to_testresults(
+            t_result = api.to_test_results(
                 exec_result.notebook_result.exit_output)
             if t_result is None:
                 print('Warning:')

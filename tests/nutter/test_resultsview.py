@@ -5,13 +5,14 @@ Licensed under the MIT license.
 
 import json
 import pytest
-from common.resultsview import RunCommandResultsView, TestCaseResultView, ListCommandResultView, ListCommandResultsView
+from common.resultsview import RunCommandResultsView, TestCaseResultView, ListCommandResultView, \
+    ListCommandResultsView
 from common.apiclientresults import ExecuteNotebookResult
 from common.testresult import TestResults, TestResult
 from common.api import TestNotebook
 
-def test__add_exec_result__vaid_instance__isadded(mocker):
 
+def test__add_exec_result__vaid_instance__isadded(mocker):
     test_results = TestResults().serialize()
     notebook_results = __get_ExecuteNotebookResult(
         'SUCCESS', 'TERMINATED', test_results)
@@ -23,7 +24,6 @@ def test__add_exec_result__vaid_instance__isadded(mocker):
 
 
 def test__add_exec_result__vaid_instance_invalid_output__isadded(mocker):
-
     test_results = "NO PICKLE"
     notebook_results = __get_ExecuteNotebookResult(
         'SUCCESS', 'TERMINATED', test_results)
@@ -39,7 +39,6 @@ def test__add_exec_result__vaid_instance_invalid_output__isadded(mocker):
 
 
 def test__add_exec_result__vaid_instance_invalid_output__no_test_case_view(mocker):
-
     test_results = "NO PICKLE"
     notebook_results = __get_ExecuteNotebookResult(
         'SUCCESS', 'TERMINATED', test_results)
@@ -51,7 +50,6 @@ def test__add_exec_result__vaid_instance_invalid_output__no_test_case_view(mocke
 
 
 def test__add_exec_result__vaid_instance__test_case_view(mocker):
-
     test_results = TestResults()
     test_case = TestResult("mycase", True, 10, [])
     test_results.append(test_case)
@@ -76,7 +74,6 @@ def test__add_exec_result__vaid_instance__test_case_view(mocker):
 
 
 def test__add_exec_result__vaid_instance_two_test_cases__two_test_case_view(mocker):
-
     test_results = TestResults()
     test_case = TestResult("mycase", True, 10, [])
     test_results.append(test_case)
@@ -115,11 +112,11 @@ def test__get_view__for_testcase_failed__returns_correct_string(mocker):
     stack_trace = "Stack Trace"
     exception = AssertionError("1 == 2")
     test_case = TestResult("mycase", False, 5.43, [
-                           'tag1', 'tag2'], exception, stack_trace)
+        'tag1', 'tag2'], exception, stack_trace)
     test_case_result_view = TestCaseResultView(test_case)
 
     expected_view = "mycase (5.43 seconds)\n\n" + \
-        stack_trace + "\n\n" + "AssertionError: 1 == 2" + "\n"
+                    stack_trace + "\n\n" + "AssertionError: 1 == 2" + "\n"
 
     # Act
     view = test_case_result_view.get_view()
@@ -128,8 +125,8 @@ def test__get_view__for_testcase_failed__returns_correct_string(mocker):
     assert expected_view == view
 
 
-def test__get_view__for_run_command_result_with_passing_test_case__shows_test_result_under_passing(mocker):
-
+def test__get_view__for_run_command_result_with_passing_test_case__shows_test_result_under_passing(
+        mocker):
     test_results = TestResults()
     test_case = TestResult("mycase", True, 10, [])
     test_results.append(test_case)
@@ -139,7 +136,7 @@ def test__get_view__for_run_command_result_with_passing_test_case__shows_test_re
     notebook_results = __get_ExecuteNotebookResult(
         'SUCCESS', 'TERMINATED', serialized_results)
 
-    #expected_view = 'Name:            \t/test_mynotebook\nNotebook Exec Result:\tTERMINATED \nTests Cases:\nCase:\tmycase\n\n\tPASSED\n\t\n\t\n\tDuration: 10\n\nCase:\tmycase2\n\n\tPASSED\n\t\n\t\n\tDuration: 10\n\n\n----------------------------------------\n'
+    # expected_view = 'Name:            \t/test_mynotebook\nNotebook Exec Result:\tTERMINATED \nTests Cases:\nCase:\tmycase\n\n\tPASSED\n\t\n\t\n\tDuration: 10\n\nCase:\tmycase2\n\n\tPASSED\n\t\n\t\n\tDuration: 10\n\n\n----------------------------------------\n'
     expected_view = '\nNotebook: /test_mynotebook - Lifecycle State: TERMINATED, Result: SUCCESS\n'
     expected_view += 'Run Page URL: {}\n'.format(notebook_results.notebook_run_page_url)
     expected_view += '============================================================\n'
@@ -157,13 +154,14 @@ def test__get_view__for_run_command_result_with_passing_test_case__shows_test_re
     assert expected_view == view
 
 
-def test__get_view__for_run_command_result_with_failing_test_case__shows_test_result_under_failing(mocker):
+def test__get_view__for_run_command_result_with_failing_test_case__shows_test_result_under_failing(
+        mocker):
     test_results = TestResults()
 
     stack_trace = "Stack Trace"
     exception = AssertionError("1 == 2")
     test_case = TestResult("mycase", False, 5.43, [
-                           'tag1', 'tag2'], exception, stack_trace)
+        'tag1', 'tag2'], exception, stack_trace)
     test_case_result_view = TestCaseResultView(test_case)
     test_results.append(test_case)
 
@@ -201,13 +199,13 @@ def test__get_view__for_run_command_result_with_failing_test_case__shows_test_re
 
     assert expected_view == view
 
+
 def test__get_view__for_list_command__with_tests_Found__shows_listing(mocker):
-    test_notebook1 = TestNotebook('test_one','/test_one')
-    test_notebook2 = TestNotebook('test_two','/test_two')
+    test_notebook1 = TestNotebook('test_one', '/test_one')
+    test_notebook2 = TestNotebook('test_two', '/test_two')
     test_notebooks = [test_notebook1, test_notebook2]
     list_result_view1 = ListCommandResultView.from_test_notebook(test_notebook1)
     list_result_view2 = ListCommandResultView.from_test_notebook(test_notebook2)
-
 
     expected_view = '\nTests Found\n'
     expected_view += '-------------------------------------------------------\n'
@@ -222,13 +220,12 @@ def test__get_view__for_list_command__with_tests_Found__shows_listing(mocker):
     assert view == expected_view
 
 
-
-def test__get_view__for_run_command_result_with_one_passing_one_failing__shows_failing_then_passing(mocker):
-
+def test__get_view__for_run_command_result_with_one_passing_one_failing__shows_failing_then_passing(
+        mocker):
     stack_trace = "Stack Trace"
     exception = AssertionError("1 == 2")
     test_case = TestResult("mycase", False, 5.43, [
-                           'tag1', 'tag2'], exception, stack_trace)
+        'tag1', 'tag2'], exception, stack_trace)
     test_case_result_view = TestCaseResultView(test_case)
 
     test_results = TestResults()

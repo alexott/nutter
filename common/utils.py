@@ -3,6 +3,7 @@ Copyright (c) Microsoft Corporation.
 Licensed under the MIT license.
 """
 
+
 def recursive_find(dict_instance, keys):
     if not isinstance(keys, list):
         raise ValueError("Expected list of keys")
@@ -17,6 +18,7 @@ def recursive_find(dict_instance, keys):
     if len(keys) == 1:
         return value
     return recursive_find(value, keys[1:len(keys)])
+
 
 def contains_test_prefix_or_surfix(name):
     if name is None:

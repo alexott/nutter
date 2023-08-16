@@ -10,7 +10,6 @@ from common.testresult import TestResult
 
 
 def get_testcase(test_name):
-
     tc = TestCase(test_name)
 
     return tc

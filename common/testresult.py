@@ -4,17 +4,19 @@ Licensed under the MIT license.
 """
 
 import base64
-import pickle
+import gzip
+import jsonpickle
 
 from py4j.protocol import Py4JJavaError
 
-from .pickleserializable import PickleSerializable
+from .serializabledata import SerializableData
 
 
 def get_test_results():
     return TestResults()
 
-class TestResults(PickleSerializable):
+
+class TestResults(SerializableData):
     def __init__(self):
         self.results = []
         self.test_cases = 0
@@ -27,23 +29,27 @@ class TestResults(PickleSerializable):
 
         self.results.append(testresult)
         self.test_cases = self.test_cases + 1
-        if (not testresult.passed):
+        if not testresult.passed:
             self.num_failures = self.num_failures + 1
 
         total_execution_time = self.total_execution_time + testresult.execution_time
         self.total_execution_time = total_execution_time
 
+    @staticmethod
+    def serialize_object(obj):
+        bin_data = gzip.compress(bytes(jsonpickle.encode(obj), 'utf-8'))
+        return str(base64.encodebytes(bin_data), "utf-8")
+
     def serialize(self):
         for i in self.results:
             if isinstance(i.exception, Py4JJavaError):
                 i.exception = Exception(str(i.exception))
-        bin_data = pickle.dumps(self)
-        return str(base64.encodebytes(bin_data), "utf-8")
+        return self.serialize_object(self)
 
     def deserialize(self, pickle_string):
         bin_str = pickle_string.encode("utf-8")
         decoded_bin_data = base64.decodebytes(bin_str)
-        return pickle.loads(decoded_bin_data)
+        return jsonpickle.decode(gzip.decompress(decoded_bin_data))
 
     def passed(self):
         for item in self.results:
@@ -64,15 +70,14 @@ class TestResults(PickleSerializable):
 
     def __item_in_list_equalto(self, expected_item):
         for item in self.results:
-            if (item == expected_item):
+            if item == expected_item:
                 return True
 
         return False
 
-class TestResult:
-    def __init__(self, test_name, passed,
-                 execution_time, tags, exception=None, stack_trace=""):
 
+class TestResult:
+    def __init__(self, test_name, passed, execution_time, tags, exception=None, stack_trace=""):
         if not isinstance(tags, list):
             raise ValueError("tags must be a list")
         self.passed = passed
@@ -81,6 +86,7 @@ class TestResult:
         self.test_name = test_name
         self.execution_time = execution_time
         self.tags = tags
+
 
     def __eq__(self, other):
         if isinstance(self, other.__class__):

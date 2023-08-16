@@ -2,11 +2,17 @@
 Copyright (c) Microsoft Corporation.
 Licensed under the MIT license.
 """
+from typing import Iterator
+
+from databricks.sdk import WorkspaceClient
+from databricks.sdk.service.jobs import Run, RunLifeCycleState
 
 from . import utils
 from abc import ABCMeta
 from .testresult import TestResults
 import logging
+
+from databricks.sdk.service.workspace import ObjectType, ObjectInfo
 
 
 class ExecuteNotebookResult(object):
@@ -18,23 +24,17 @@ class ExecuteNotebookResult(object):
         self.notebook_run_page_url = notebook_run_page_url
 
     @classmethod
-    def from_job_output(cls, job_output):
-        life_cycle_state = utils.recursive_find(
-            job_output, ['metadata', 'state', 'life_cycle_state'])
-        notebook_path = utils.recursive_find(
-            job_output, ['metadata', 'task', 'notebook_task', 'notebook_path'])
-        notebook_run_page_url = utils.recursive_find(
-            job_output, ['metadata', 'run_page_url'])
-        notebook_result = NotebookOutputResult.from_job_output(job_output)
+    def from_job_output(cls, run: Run, dbclient: WorkspaceClient):
+        notebook_result = NotebookOutputResult.from_job_output(run, dbclient)
 
-        return cls(life_cycle_state, notebook_path,
-                   notebook_result, notebook_run_page_url)
+        return cls(run.state.life_cycle_state, run.tasks[0].notebook_task.notebook_path,
+                   notebook_result, run.run_page_url)
 
     @property
     def is_error(self):
         # The assumption is that the task is an terminal state
         # Success state must be TERMINATED all the others are considered failures
-        return self.task_result_state != 'TERMINATED'
+        return not (self.task_result_state == RunLifeCycleState.TERMINATED)
 
     @property
     def is_any_error(self):
@@ -48,7 +48,9 @@ class ExecuteNotebookResult(object):
         for test_case in self.notebook_result.nutter_test_results.results:
             if not test_case.passed:
                 return True
+
         return False
+
 
 class NotebookOutputResult(object):
     def __init__(self, result_state, exit_output, nutter_test_results):
@@ -57,20 +59,21 @@ class NotebookOutputResult(object):
         self.nutter_test_results = nutter_test_results
 
     @classmethod
-    def from_job_output(cls, job_output):
+    def from_job_output(cls, run: Run, dbclient: WorkspaceClient):
+        ntb_task = run.tasks[0]
+        run_id = ntb_task.run_id
+
+        output = dbclient.jobs.get_run_output(run_id)
+
         exit_output = ''
         nutter_test_results = ''
-        notebook_result_state = ''
-        if 'error' in job_output:
-            exit_output = job_output['error']
+        notebook_result_state = ntb_task.state.result_state
+        if output.error:
+            exit_output = output
 
-        if 'notebook_output' in job_output:
-            notebook_result_state = utils.recursive_find(
-                job_output, ['metadata', 'state', 'result_state'])
-
-            if 'result' in job_output['notebook_output']:
-                exit_output = job_output['notebook_output']['result']
-                nutter_test_results = cls._get_nutter_test_results(exit_output)
+        if output.notebook_output is not None and output.notebook_output.result is not None:
+            exit_output = output.notebook_output.result
+            nutter_test_results = cls._get_nutter_test_results(exit_output)
 
         return cls(notebook_result_state, exit_output, nutter_test_results)
 
@@ -111,24 +114,20 @@ class WorkspacePath(object):
         self.test_notebooks = self._set_test_notebooks()
 
     @classmethod
-    def from_api_response(cls, objects):
+    def from_api_response(cls, objects: Iterator[ObjectInfo]):
         notebooks = cls._set_notebooks(objects)
         directories = cls._set_directories(objects)
         return cls(notebooks, directories)
 
     @classmethod
-    def _set_notebooks(cls, objects):
-        if 'objects' not in objects:
-            return []
-        return [NotebookObject(object['path']) for object in objects['objects']
-                if object['object_type'] == 'NOTEBOOK']
+    def _set_notebooks(cls, objects: Iterator[ObjectInfo]):
+        return [NotebookObject(obj.path) for obj in objects
+                if obj.object_type == ObjectType.NOTEBOOK]
 
     @classmethod
-    def _set_directories(cls, objects):
-        if 'objects' not in objects:
-            return []
-        return [Directory(object['path']) for object in objects['objects']
-                if object['object_type'] == 'DIRECTORY']
+    def _set_directories(cls, objects: Iterator[ObjectInfo]):
+        return [Directory(obj.path) for obj in objects
+                if obj.object_type == ObjectType.DIRECTORY]
 
     def _set_test_notebooks(self):
         return [notebook for notebook in self.notebooks
@@ -151,7 +150,7 @@ class NotebookObject(WorkspaceObject):
         segments = path.split('/')
         if len(segments) == 0:
             raise ValueError('Invalid path. Path must start /')
-        name = segments[len(segments)-1]
+        name = segments[-1]
         return name
 
     @property

@@ -29,13 +29,13 @@ def test__databricks_client__token_host_set__clientreturns(mocker):
 
 def test__list_notebooks__onenotebook__okay(mocker):
     db = __get_client(mocker)
-    mocker.patch.object(db.inner_dbclient.workspace, 'list')
+    mocker.patch.object(db.dbclient.workspace, 'list')
 
     objects = """{"objects":[
     {"object_type":"NOTEBOOK","path":"/nutfixjob","language":"PYTHON"},
     {"object_type":"DIRECTORY","path":"/ETL-Part-3-1.0.3"}]}"""
 
-    db.inner_dbclient.workspace.list.return_value = json.loads(objects)
+    db.dbclient.workspace.list.return_value = json.loads(objects)
 
     notebooks = db.list_notebooks('/')
 
@@ -44,12 +44,12 @@ def test__list_notebooks__onenotebook__okay(mocker):
 
 def test__list_notebooks__zeronotebook__okay(mocker):
     db = __get_client(mocker)
-    mocker.patch.object(db.inner_dbclient.workspace, 'list')
+    mocker.patch.object(db.dbclient.workspace, 'list')
 
     objects = """{"objects":[
     {"object_type":"DIRECTORY","path":"/ETL-Part-3-1.0.3"}]}"""
 
-    db.inner_dbclient.workspace.list.return_value = json.loads(objects)
+    db.dbclient.workspace.list.return_value = json.loads(objects)
 
     notebooks = db.list_notebooks('/')
 
@@ -206,10 +206,10 @@ def __get_submit_run_response(task_result_state, life_cycle_state, result, run_p
 
 def __get_client_for_execute_notebook(mocker, output_data, run_id):
     db = __get_client(mocker)
-    mocker.patch.object(db.inner_dbclient.jobs, 'submit_run')
-    db.inner_dbclient.jobs.submit_run.return_value = run_id
-    mocker.patch.object(db.inner_dbclient.jobs, 'get_run_output')
-    db.inner_dbclient.jobs.get_run_output.return_value = json.loads(
+    mocker.patch.object(db.dbclient.jobs, 'submit_run')
+    db.dbclient.jobs.submit_run.return_value = run_id
+    mocker.patch.object(db.dbclient.jobs, 'get_run_output')
+    db.dbclient.jobs.get_run_output.return_value = json.loads(
         output_data)
 
     return db
