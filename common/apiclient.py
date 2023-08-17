@@ -4,11 +4,10 @@ Licensed under the MIT license.
 """
 
 import uuid
-import time
 import datetime
-from . import utils
 from .apiclientresults import ExecuteNotebookResult, WorkspacePath
 import logging
+from .utils import get_nutter_version
 
 from databricks.sdk import WorkspaceClient
 from databricks.sdk.service.jobs import NotebookTask, Task
@@ -26,7 +25,7 @@ class DatabricksAPIClient(object):
 
     def __init__(self):
         self.min_timeout = MIN_TIMEOUT
-        self.dbclient = WorkspaceClient()
+        self.dbclient = WorkspaceClient(product="nutter", product_version=get_nutter_version())
 
     def list_notebooks(self, path):
         workspace_objects = self.list_objects(path)

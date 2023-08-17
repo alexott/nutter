@@ -15,12 +15,12 @@ from cli.reportsman import ReportWriterManager, ReportWritersTypes, ReportWriter
 
 
 def test__get_cli_version__without_build__env_var__returns_value():
-    version = nuttercli.get_cli_version()
+    version = nuttercli.get_nutter_version()
     assert version is not None
 
 
 def test__get_cli_header_value():
-    version = nuttercli.get_cli_version()
+    version = nuttercli.get_nutter_version()
     header = 'Nutter Version {}\n'.format(version)
     header += '+' * 50
     header += '\n'
@@ -30,18 +30,18 @@ def test__get_cli_header_value():
 
 
 def test__get_cli_version__with_build__env_var__returns_value(mocker):
-    version = nuttercli.get_cli_version()
+    version = nuttercli.get_nutter_version()
     build_number = '1.2.3'
     mocker.patch.dict(
         os.environ, {nuttercli.BUILD_NUMBER_ENV_VAR: build_number})
-    version_with_build_number = nuttercli.get_cli_version()
+    version_with_build_number = nuttercli.get_nutter_version()
     assert version_with_build_number == '{}.{}'.format(version, build_number)
 
 def test__get_version_label__valid_string(mocker):
     mocker.patch.dict(os.environ, {'DATABRICKS_HOST': 'myhost'})
     mocker.patch.dict(os.environ, {'DATABRICKS_TOKEN': 'mytoken'})
 
-    version = nuttercli.get_cli_version()
+    version = nuttercli.get_nutter_version()
     expected = 'Nutter Version {}'.format(version)
     cli = NutterCLI()
     version_from_cli =  cli._get_version_label()

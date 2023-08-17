@@ -4,7 +4,7 @@ import cli.nuttercli as nuttercli
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-version = nuttercli.get_cli_version()
+version = nuttercli.get_nutter_version()
 
 
 def parse_requirements(filename):

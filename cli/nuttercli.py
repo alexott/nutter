@@ -10,6 +10,7 @@ import datetime
 
 import common.api as api
 from common.apiclient import InvalidConfigurationException
+from common.utils import get_nutter_version
 
 import common.resultsview as view
 from .eventhandlers import ConsoleEventHandler
@@ -17,20 +18,9 @@ from .resultsvalidator import ExecutionResultsValidator
 from .reportsman import ReportWriters
 from . import reportsman as reports
 
-__version__ = '0.1.35'
-
-BUILD_NUMBER_ENV_VAR = 'NUTTER_BUILD_NUMBER'
-
-
-def get_cli_version():
-    build_number = os.environ.get(BUILD_NUMBER_ENV_VAR)
-    if build_number:
-        return f'{__version__}.{build_number}'
-    return __version__
-
 
 def get_cli_header():
-    header = f'Nutter Version {get_cli_version()}\n'
+    header = f'Nutter Version {get_nutter_version()}\n'
     header += '+' * 50
     header += '\n'
 
@@ -100,7 +90,8 @@ class NutterCLI(object):
 
         ExecutionResultsValidator().validate(results)
 
-    def _get_report_writer_manager(self, junit_report, tags_report):
+    @staticmethod
+    def _get_report_writer_manager(junit_report, tags_report):
         writers = 0
         if junit_report:
             writers = ReportWriters.JUNIT
@@ -109,7 +100,8 @@ class NutterCLI(object):
 
         return reports.get_report_writer_manager(writers)
 
-    def _handle_reports(self, report_manager, exec_results):
+    @staticmethod
+    def _handle_reports(report_manager, exec_results):
         if not report_manager.has_providers():
             logging.debug('No providers were registered.')
             return
@@ -129,26 +121,30 @@ class NutterCLI(object):
         for file_name in report_manager.write():
             print('File {} written'.format(file_name))
 
-    def _display_list_results(self, results):
+    @staticmethod
+    def _display_list_results(results):
         list_results_view = view.get_list_results_view(results)
         view.print_results_view(list_results_view)
 
-    def _display_test_results(self, results):
+    @staticmethod
+    def _display_test_results(results):
         results_view = view.get_run_results_views(results)
         view.print_results_view(results_view)
 
-    def _is_a_test_pattern(self, pattern):
+    @staticmethod
+    def _is_a_test_pattern(pattern):
         segments = pattern.split('/')
         if len(segments) > 0:
             search_pattern = segments[len(segments)-1]
             if api.TestNotebook._is_valid_test_name(search_pattern):
                 return False
             return True
-        logging.Fatal(
+        logging.fatal(
             """ Invalid argument.
                  The value must be the full path to the test or a pattern """)
 
-    def _print_cli_header(self):
+    @staticmethod
+    def _print_cli_header():
         print(get_cli_header())
 
     def _set_nutter(self, debug):
@@ -165,17 +161,20 @@ class NutterCLI(object):
         print(self._get_version_label())
         exit(0)
 
-    def _get_version_label(self):
-        version = get_cli_version()
+    @staticmethod
+    def _get_version_label():
+        version = get_nutter_version()
         return 'Nutter Version {}'.format(version)
 
-    def _print_config_error_and_exit(self):
+    @staticmethod
+    def _print_config_error_and_exit():
         print(""" Invalid configuration.\n
                   DATABRICKS_HOST and DATABRICKS_TOKEN
                    environment variables are not set """)
         exit(1)
 
-    def _set_debugging(self, debug, log_to_file):
+    @staticmethod
+    def _set_debugging(debug, log_to_file):
         if debug:
             log_name = None
             if log_to_file:

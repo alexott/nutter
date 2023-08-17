@@ -515,10 +515,10 @@ pip install --force-reinstall pytest==5.0.1
 
 Creating the wheel file and manually test wheel locally
 
-1. Change directory to the root that contains setup.py
-2. Update the version in the setup.py
-3. Run the following command: python3 setup.py sdist bdist_wheel
-4. (optional) Install the wheel locally by running: python3 -m pip install <path-to-whl-file>
+1. Change directory to the root that contains `setup.py`
+2. Update the version in the `setup.py`
+3. Run the following command: `python3 setup.py sdist bdist_wheel`
+4. (optional) Install the wheel locally by running: `python3 -m pip install <path-to-whl-file>`
 
 ### Contribution Guidelines
 
