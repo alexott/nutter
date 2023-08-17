@@ -27,16 +27,16 @@ class TestResults(SerializableData):
         self.num_failures = 0
         self.total_execution_time = 0
 
-    def append(self, testresult):
-        if not isinstance(testresult, TestResult):
+    def append(self, test_result):
+        if not isinstance(test_result, TestResult):
             raise TypeError("Can only append TestResult to TestResults")
 
-        self.results.append(testresult)
+        self.results.append(test_result)
         self.test_cases = self.test_cases + 1
-        if not testresult.passed:
+        if not test_result.passed:
             self.num_failures = self.num_failures + 1
 
-        total_execution_time = self.total_execution_time + testresult.execution_time
+        total_execution_time = self.total_execution_time + test_result.execution_time
         self.total_execution_time = total_execution_time
 
     @staticmethod

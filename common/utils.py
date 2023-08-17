@@ -5,7 +5,7 @@ Licensed under the MIT license.
 
 import os
 
-__version__ = '0.1.35'
+__version__ = '0.1.36'
 
 BUILD_NUMBER_ENV_VAR = 'NUTTER_BUILD_NUMBER'
 
@@ -17,9 +17,9 @@ def get_nutter_version():
     return __version__
 
 
-
-def contains_test_prefix_or_surfix(name):
+def contains_test_prefix_or_suffix(name):
     if name is None:
         return False
 
-    return name.lower().startswith('test_') or name.lower().endswith('_test')
+    lower_name = name.lower()
+    return lower_name.startswith('test_') or lower_name.endswith('_test')

@@ -237,7 +237,7 @@ class TestNotebook(object):
 
     @staticmethod
     def _is_valid_test_name(name):
-        return utils.contains_test_prefix_or_surfix(name)
+        return utils.contains_test_prefix_or_suffix(name)
 
     @staticmethod
     def _get_notebook_name_from_path(path):

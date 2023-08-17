@@ -168,7 +168,7 @@ class NotebookObject(WorkspaceObject):
 
     @property
     def is_test_notebook(self):
-        return utils.contains_test_prefix_or_surfix(self.name)
+        return utils.contains_test_prefix_or_suffix(self.name)
 
 
 class Directory(WorkspaceObject):
