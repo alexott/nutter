@@ -20,7 +20,7 @@ class NotebookOutputResult(object):
         if isinstance(result_state, str):
             self.result_state = result_state
         else:
-            self.result_state = result_state.name
+            self.result_state = result_state.value
         self.exit_output = exit_output
         self.nutter_test_results = nutter_test_results
 
@@ -80,7 +80,7 @@ class ExecuteNotebookResult(object):
         if isinstance(task_result_state, str):
             self.task_result_state = task_result_state
         else:
-            self.task_result_state = task_result_state.name
+            self.task_result_state = task_result_state.value
         self.notebook_path = notebook_path
         self.notebook_result = notebook_result
         self.notebook_run_page_url = notebook_run_page_url
