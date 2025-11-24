@@ -38,6 +38,8 @@ def test__add_event_and_wait__2_event2__handler_receives_them():
 
 
 class TestEventHandler(EventHandler):
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __init__(self):
         self._queue = None
         super().__init__()
@@ -52,4 +54,5 @@ class TestEventHandler(EventHandler):
 
 
 class TestStatusEvent(enum.Enum):
+    __test__ = False  # Tell pytest this is not a test class
     AnEvent = 1

@@ -266,10 +266,10 @@ def test__run_tests__twomatch__okay(mocker):
     assert len(results) == 2
 
     result = results[0]
-    assert result.task_result_state == RunLifeCycleState.TERMINATED
+    assert result.task_result_state == 'TERMINATED'
 
     result = results[1]
-    assert result.task_result_state == RunLifeCycleState.TERMINATED
+    assert result.task_result_state == 'TERMINATED'
 
 
 def test__run_tests_recursively__2test1dir3test__5_tests(mocker):
@@ -326,7 +326,7 @@ def test__run_tests__twomatch__is_uppercase__okay(mocker):
     results = nutter.run_tests("/my*", "cluster")
 
     assert len(results) == 2
-    assert results[0].task_result_state == RunLifeCycleState.TERMINATED
+    assert results[0].task_result_state == 'TERMINATED'
 
 
 def test__run_tests__nomatch_case_sensitive__okay(mocker):
@@ -356,10 +356,10 @@ def test__run_tests__fourmatches_with_pattern__okay(mocker):
     results = nutter.run_tests("/my*", "cluster")
 
     assert len(results) == 4
-    assert results[0].task_result_state == RunLifeCycleState.TERMINATED
-    assert results[1].task_result_state == RunLifeCycleState.TERMINATED
-    assert results[2].task_result_state == RunLifeCycleState.TERMINATED
-    assert results[3].task_result_state == RunLifeCycleState.TERMINATED
+    assert results[0].task_result_state == 'TERMINATED'
+    assert results[1].task_result_state == 'TERMINATED'
+    assert results[2].task_result_state == 'TERMINATED'
+    assert results[3].task_result_state == 'TERMINATED'
 
 
 def test__run_tests__with_invalid_pattern__valueerror(mocker):
@@ -494,7 +494,8 @@ def test__testnamepatternmatcher_ctor__invali_pattern__valueerror(pattern):
 def _get_submit_run_response(result_state, life_cycle_state, result):
     run_info = Run(
         tasks=[
-            RunTask(notebook_task=NotebookTask("/mynotebook"),
+            RunTask(task_key="test_task",
+                    notebook_task=NotebookTask("/mynotebook"),
                     run_id=2,
                     state=RunState(life_cycle_state=getattr(RunLifeCycleState, life_cycle_state),
                                    result_state=getattr(RunResultState, result_state),
@@ -548,6 +549,8 @@ def _get_workspacepathobject(objects):
 
 
 class TestEventHandler(EventHandler):
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __init__(self):
         self._queue = None
         super().__init__()

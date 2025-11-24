@@ -205,6 +205,8 @@ class RunCommandResultView(ResultsView):
 
 
 class TestCaseResultView(ResultsView):
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __init__(self, nutter_test_results):
 
         if not isinstance(nutter_test_results, TestResult):

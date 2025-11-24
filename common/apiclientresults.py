@@ -16,8 +16,10 @@ from databricks.sdk.service.workspace import ObjectType, ObjectInfo
 
 
 class NotebookOutputResult(object):
-    def __init__(self, result_state: Union[RunResultState, str], exit_output, nutter_test_results):
-        if isinstance(result_state, str):
+    def __init__(self, result_state: Union[RunResultState, str, None], exit_output, nutter_test_results):
+        if result_state is None:
+            self.result_state = None
+        elif isinstance(result_state, str):
             self.result_state = result_state
         else:
             self.result_state = result_state.value
@@ -75,9 +77,11 @@ class NotebookOutputResult(object):
 
 
 class ExecuteNotebookResult(object):
-    def __init__(self, task_result_state: Union[RunResultState, str], notebook_path: str,
+    def __init__(self, task_result_state: Union[RunResultState, str, None], notebook_path: str,
                  notebook_result: NotebookOutputResult, notebook_run_page_url):
-        if isinstance(task_result_state, str):
+        if task_result_state is None:
+            self.task_result_state = None
+        elif isinstance(task_result_state, str):
             self.task_result_state = task_result_state
         else:
             self.task_result_state = task_result_state.value
@@ -89,15 +93,14 @@ class ExecuteNotebookResult(object):
     def from_job_output(cls, run: Run, dbclient: WorkspaceClient):
         notebook_result = NotebookOutputResult.from_job_output(run, dbclient)
 
-        return cls(run.state.result_state, run.tasks[0].notebook_task.notebook_path,
+        return cls(run.state.life_cycle_state, run.tasks[0].notebook_task.notebook_path,
                    notebook_result, run.run_page_url)
 
     @property
     def is_error(self) -> bool:
-        err = self.task_result_state != 'SUCCESS' and \
-              self.task_result_state != 'SUCCESS_WITH_FAILURES'
-        # The assumption is that the task is a terminal state
-        # Success state must be SUCCESS all the others are considered failures
+        # task_result_state now contains lifecycle state
+        # TERMINATED is the normal completion state, other states indicate issues
+        err = self.task_result_state not in ['TERMINATED', 'SUCCESS', 'SUCCESS_WITH_FAILURES', None]
         return err
 
     @property

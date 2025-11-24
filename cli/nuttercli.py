@@ -151,7 +151,7 @@ class NutterCLI(object):
         try:
             event_handler = ConsoleEventHandler(debug)
             self._nutter = api.get_nutter(event_handler)
-        except InvalidConfigurationException as ex:
+        except (InvalidConfigurationException, ValueError) as ex:
             logging.debug(ex)
             self._print_config_error_and_exit()
 

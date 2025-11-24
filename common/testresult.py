@@ -18,6 +18,8 @@ def get_test_results():
 
 
 class TestResults(SerializableData):
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __str__(self) -> str:
         return jsonpickle.encode(self)
 
@@ -81,6 +83,8 @@ class TestResults(SerializableData):
 
 
 class TestResult:
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __init__(self, test_name, passed, execution_time, tags, exception=None, stack_trace=""):
         if not isinstance(tags, list):
             raise ValueError("tags must be a list")

@@ -47,6 +47,8 @@ class ExecutionResultsValidator(object):
 
 
 class TestCaseFailureException(Exception):
+    __test__ = False  # Tell pytest this is not a test class
+    
     def __init__(self, message):
         super().__init__(message)
 
