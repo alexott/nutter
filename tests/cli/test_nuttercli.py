@@ -75,8 +75,11 @@ def test__run__pattern__display_results(mocker):
 
 
 def test__nutter_cli_ctor__handles__configurationexception_and_exits_1(mocker):
-    mocker.patch.dict(os.environ, {'DATABRICKS_HOST': ''})
-    mocker.patch.dict(os.environ, {'DATABRICKS_TOKEN': ''})
+    from databricks.sdk import WorkspaceClient
+    
+    # Mock WorkspaceClient to raise ValueError when credentials are missing
+    mocker.patch.dict(os.environ, {'DATABRICKS_HOST': '', 'DATABRICKS_TOKEN': ''})
+    mocker.patch.object(WorkspaceClient, '__init__', side_effect=ValueError("cannot configure default credentials"))
 
     with pytest.raises(SystemExit) as mock_ex:
         cli = NutterCLI()
@@ -247,3 +250,121 @@ def _get_run_tests_response(result_state, life_cycle_state, notebook_result):
     results.append(ExecuteNotebookResult.from_job_output(run_info1, mock_client1))
     results.append(ExecuteNotebookResult.from_job_output(run_info2, mock_client2))
     return results
+
+
+def test__run__with_cluster_name__resolves_to_cluster_id(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Mock the get_cluster_id_by_name method
+    mocker.patch.object(cli._nutter.dbclient, 'get_cluster_id_by_name')
+    cli._nutter.dbclient.get_cluster_id_by_name.return_value = 'resolved-cluster-id'
+    
+    mocker.patch.object(cli, '_display_test_results')
+    cli.run('test_mynotebook2', cluster_name='my-cluster')
+    
+    # Verify that get_cluster_id_by_name was called with the correct name
+    cli._nutter.dbclient.get_cluster_id_by_name.assert_called_once_with('my-cluster')
+    assert cli._display_test_results.call_count == 1
+
+
+def test__run__with_both_cluster_id_and_name__exits_with_error(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Should exit with error when both cluster_id and cluster_name are provided
+    with pytest.raises(SystemExit) as mock_ex:
+        cli.run('test_mynotebook2', cluster_id='cluster-id', cluster_name='cluster-name')
+    
+    assert mock_ex.type == SystemExit
+    assert mock_ex.value.code == 1
+
+
+def test__run__with_neither_cluster_id_nor_name__exits_with_error(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Should exit with error when neither cluster_id nor cluster_name is provided
+    with pytest.raises(SystemExit) as mock_ex:
+        cli.run('test_mynotebook2')
+    
+    assert mock_ex.type == SystemExit
+    assert mock_ex.value.code == 1
+
+
+def test__run__with_cluster_name_resolution_fails__exits_with_error(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Mock the get_cluster_id_by_name method to raise ValueError
+    mocker.patch.object(cli._nutter.dbclient, 'get_cluster_id_by_name')
+    cli._nutter.dbclient.get_cluster_id_by_name.side_effect = ValueError("Cluster not found")
+    
+    # Should exit with error when cluster name resolution fails
+    with pytest.raises(SystemExit) as mock_ex:
+        cli.run('test_mynotebook2', cluster_name='nonexistent-cluster')
+    
+    assert mock_ex.type == SystemExit
+    assert mock_ex.value.code == 1
+
+
+def test__run__with_serverless__executes_successfully(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    mocker.patch.object(cli, '_display_test_results')
+    cli.run('test_mynotebook2', serverless=1)
+    
+    # Verify that run_test was called with serverless parameter
+    assert cli._nutter.run_test.call_count == 1
+    call_kwargs = cli._nutter.run_test.call_args[1]
+    assert call_kwargs['serverless'] == 1
+    assert call_kwargs['cluster_id'] is None
+    assert cli._display_test_results.call_count == 1
+
+
+def test__run__with_serverless_and_cluster_id__exits_with_error(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Should exit with error when both serverless and cluster_id are provided
+    with pytest.raises(SystemExit) as mock_ex:
+        cli.run('test_mynotebook2', cluster_id='cluster-123', serverless=1)
+    
+    assert mock_ex.type == SystemExit
+    assert mock_ex.value.code == 1
+
+
+def test__run__with_no_compute_option__exits_with_error(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    # Should exit with error when no compute option is provided
+    with pytest.raises(SystemExit) as mock_ex:
+        cli.run('test_mynotebook2')
+    
+    assert mock_ex.type == SystemExit
+    assert mock_ex.value.code == 1
+
+
+def test__run__pattern_with_serverless__executes_successfully(mocker):
+    test_results = TestResults().serialize()
+    cli = _get_cli_for_tests(
+        mocker, 'SUCCESS', 'TERMINATED', test_results)
+    
+    mocker.patch.object(cli, '_display_test_results')
+    cli.run('my*', serverless=1)
+    
+    # Verify that run_tests was called with serverless parameter
+    assert cli._nutter.run_tests.call_count == 1
+    call_kwargs = cli._nutter.run_tests.call_args[1]
+    assert call_kwargs['serverless'] == 1
+    assert call_kwargs['cluster_id'] is None
+    assert cli._display_test_results.call_count == 1

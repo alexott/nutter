@@ -11,11 +11,15 @@ import os
 from databricks.sdk.service.jobs import Run, RunTask, NotebookTask, RunState, \
     RunLifeCycleState, RunResultState, RunOutput, NotebookOutput
 from databricks.sdk.service.workspace import ObjectType, ObjectInfo, Language
+from databricks.sdk.service.compute import ClusterDetails
 
 
 def test__databricks_client__token_host_notset__clientfails(mocker):
-    mocker.patch.dict(os.environ, {'DATABRICKS_HOST': ''})
-    mocker.patch.dict(os.environ, {'DATABRICKS_TOKEN': ''})
+    from databricks.sdk import WorkspaceClient
+    
+    # Mock WorkspaceClient to raise ValueError when credentials are missing
+    mocker.patch.dict(os.environ, {'DATABRICKS_HOST': '', 'DATABRICKS_TOKEN': ''})
+    mocker.patch.object(WorkspaceClient, '__init__', side_effect=ValueError("cannot configure default credentials"))
 
     with pytest.raises(ValueError):
         dbclient = client.databricks_client()
@@ -218,3 +222,155 @@ def __get_client(mocker):
     mocker.patch.dict(os.environ, {'DATABRICKS_TOKEN': 'mytoken'})
 
     return DatabricksAPIClient()
+
+
+def test__get_cluster_id_by_name__cluster_found__returns_id(mocker):
+    db = __get_client(mocker)
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    
+    # Mock clusters list response
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='test-cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='other-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    
+    cluster_id = db.get_cluster_id_by_name('test-cluster')
+    
+    assert cluster_id == '1234-567890-abcd'
+
+
+def test__get_cluster_id_by_name__empty_name__raises_error(mocker):
+    db = __get_client(mocker)
+    
+    with pytest.raises(ValueError, match="empty cluster name"):
+        db.get_cluster_id_by_name('')
+
+
+def test__get_cluster_id_by_name__cluster_not_found__raises_error(mocker):
+    db = __get_client(mocker)
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    
+    # Mock clusters list response
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='test-cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='other-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    
+    with pytest.raises(ValueError, match="No cluster found with name 'nonexistent-cluster'"):
+        db.get_cluster_id_by_name('nonexistent-cluster')
+
+
+def test__get_cluster_id_by_name__multiple_clusters_with_same_name__raises_error(mocker):
+    db = __get_client(mocker)
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    
+    # Mock clusters list response with duplicate names
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='duplicate-cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='duplicate-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    
+    with pytest.raises(ValueError, match="Multiple clusters found with name 'duplicate-cluster'"):
+        db.get_cluster_id_by_name('duplicate-cluster')
+
+
+def test__get_cluster_id_by_name__case_insensitive__returns_id(mocker):
+    db = __get_client(mocker)
+    
+    # Test lowercase
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='Test-Cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='other-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    cluster_id = db.get_cluster_id_by_name('test-cluster')
+    assert cluster_id == '1234-567890-abcd'
+    
+    # Test uppercase
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='Test-Cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='other-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    cluster_id = db.get_cluster_id_by_name('TEST-CLUSTER')
+    assert cluster_id == '1234-567890-abcd'
+    
+    # Test mixed case
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='Test-Cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='other-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    cluster_id = db.get_cluster_id_by_name('TeSt-ClUsTeR')
+    assert cluster_id == '1234-567890-abcd'
+
+
+def test__get_cluster_id_by_name__multiple_clusters_case_insensitive__raises_error(mocker):
+    db = __get_client(mocker)
+    mocker.patch.object(db.dbclient.clusters, 'list')
+    
+    # Mock clusters list response with duplicate names in different cases
+    clusters = [
+        ClusterDetails(cluster_id='1234-567890-abcd', cluster_name='Test-Cluster'),
+        ClusterDetails(cluster_id='9876-543210-wxyz', cluster_name='test-cluster')
+    ]
+    db.dbclient.clusters.list.return_value = iter(clusters)
+    
+    with pytest.raises(ValueError, match="Multiple clusters found with name"):
+        db.get_cluster_id_by_name('TEST-CLUSTER')
+
+
+def test__execute_notebook__with_serverless__success(mocker):
+    db = __get_client(mocker)
+    run_info, run_output = __get_submit_run_response('SUCCESS', 'TERMINATED', 'result')
+    mocker.patch.object(db.dbclient.jobs, 'submit_and_wait')
+    db.dbclient.jobs.submit_and_wait.return_value = run_info
+    mocker.patch.object(db.dbclient.jobs, 'get_run_output')
+    db.dbclient.jobs.get_run_output.return_value = run_output
+    
+    result = db.execute_notebook('/mynotebook', serverless=1, timeout=120)
+    
+    # Verify submit_and_wait was called with environments
+    assert db.dbclient.jobs.submit_and_wait.call_count == 1
+    call_kwargs = db.dbclient.jobs.submit_and_wait.call_args[1]
+    assert 'environments' in call_kwargs
+    assert len(call_kwargs['environments']) == 1
+    assert call_kwargs['environments'][0].environment_key == 'serverless'
+    assert call_kwargs['environments'][0].spec.environment_version == '1'
+    
+    # Verify task has environment_key instead of cluster_id
+    tasks = db.dbclient.jobs.submit_and_wait.call_args[1]['tasks']
+    assert tasks[0].environment_key == 'serverless'
+    assert tasks[0].existing_cluster_id is None
+
+
+def test__execute_notebook__no_compute__raises_error(mocker):
+    db = __get_client(mocker)
+    
+    with pytest.raises(ValueError, match="either cluster_id or serverless must be specified"):
+        db.execute_notebook('/mynotebook', timeout=120)
+
+
+def test__execute_notebook__both_cluster_and_serverless__raises_error(mocker):
+    db = __get_client(mocker)
+    
+    with pytest.raises(ValueError, match="cannot specify both cluster_id and serverless"):
+        db.execute_notebook('/mynotebook', cluster_id='cluster-123', serverless=1, timeout=120)
+
+
+def test__execute_notebook__serverless_not_integer__raises_error(mocker):
+    db = __get_client(mocker)
+    
+    # Test with string
+    with pytest.raises(ValueError, match="serverless must be an integer"):
+        db.execute_notebook('/mynotebook', serverless='1.0', timeout=120)
+    
+    # Test with float
+    with pytest.raises(ValueError, match="serverless must be an integer"):
+        db.execute_notebook('/mynotebook', serverless=1.0, timeout=120)

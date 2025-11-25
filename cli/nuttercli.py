@@ -40,15 +40,43 @@ class NutterCLI(object):
         self._set_nutter(debug)
         super().__init__()
 
-    def run(self, test_pattern, cluster_id,
+    def run(self, test_pattern, cluster_id=None, cluster_name=None, serverless=None,
             timeout=120, junit_report=False,
             tags_report=False, max_parallel_tests=1,
             recursive=False, notebook_params=None):
         try:
-            logging.debug(""" Running tests. test_pattern: {} cluster_id: {}  notebook_params: {} timeout: {}
+            # Validate compute configuration
+            compute_options = [cluster_id is not None, cluster_name is not None, serverless is not None]
+            compute_count = sum(compute_options)
+            
+            if compute_count == 0:
+                self._logger.fatal("Must specify one of: --cluster_id, --cluster_name, or --serverless")
+                exit(1)
+            
+            if compute_count > 1:
+                self._logger.fatal("Cannot specify multiple compute options. Use only one of: --cluster_id, --cluster_name, or --serverless")
+                exit(1)
+            
+            # If cluster_name is provided, resolve it to cluster_id
+            if cluster_name is not None:
+                logging.debug(f"Resolving cluster name '{cluster_name}' to cluster ID")
+                try:
+                    cluster_id = self._nutter.dbclient.get_cluster_id_by_name(cluster_name)
+                    logging.debug(f"Resolved cluster name '{cluster_name}' to cluster ID '{cluster_id}'")
+                except ValueError as e:
+                    self._logger.fatal(f"Error resolving cluster name: {e}")
+                    exit(1)
+            
+            # Log execution parameters
+            if serverless:
+                logging.debug(f"Running tests with serverless compute (version: {serverless})")
+            else:
+                logging.debug(f"Running tests with cluster ID: {cluster_id}")
+                
+            logging.debug(""" Running tests. test_pattern: {} cluster_id: {} serverless: {} notebook_params: {} timeout: {}
                                junit_report: {} max_parallel_tests: {}
                                tags_report: {}  recursive:{} """
-                          .format(test_pattern, cluster_id, timeout,
+                          .format(test_pattern, cluster_id, serverless, timeout,
                                   junit_report, max_parallel_tests,
                                   tags_report, recursive, notebook_params))
 
@@ -57,14 +85,17 @@ class NutterCLI(object):
             if self._is_a_test_pattern(test_pattern):
                 logging.debug('Executing pattern')
                 results = self._nutter.run_tests(
-                    test_pattern, cluster_id, timeout,
-                    max_parallel_tests, recursive, notebook_params)
+                    test_pattern, cluster_id=cluster_id, timeout=timeout,
+                    max_parallel_tests=max_parallel_tests, recursive=recursive, 
+                    notebook_params=notebook_params, serverless=serverless)
                 self._nutter.events_processor_wait()
                 self._handle_results(results, junit_report, tags_report)
                 return
 
             logging.debug('Executing single test')
-            result = self._nutter.run_test(test_pattern, cluster_id, timeout)
+            result = self._nutter.run_test(test_pattern, cluster_id=cluster_id, 
+                                          timeout=timeout, notebook_params=notebook_params,
+                                          serverless=serverless)
 
             self._handle_results([result], junit_report, tags_report)
 
@@ -169,8 +200,11 @@ class NutterCLI(object):
     @staticmethod
     def _print_config_error_and_exit():
         print(""" Invalid configuration.\n
-                  DATABRICKS_HOST and DATABRICKS_TOKEN
-                   environment variables are not set """)
+                  Set relevant environment variables: i.e., DATABRICKS_HOST and DATABRICKS_TOKEN
+                  Example:
+                  export DATABRICKS_HOST=<HOST>
+                  export DATABRICKS_TOKEN=<TOKEN>
+                  """)
         exit(1)
 
     @staticmethod

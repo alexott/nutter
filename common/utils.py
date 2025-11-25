@@ -5,7 +5,7 @@ Licensed under the MIT license.
 
 import os
 
-__version__ = '0.1.36'
+__version__ = '0.2.0'
 
 BUILD_NUMBER_ENV_VAR = 'NUTTER_BUILD_NUMBER'
 
